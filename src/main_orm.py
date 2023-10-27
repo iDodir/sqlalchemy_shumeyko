@@ -1,7 +1,7 @@
-import asyncio
+from src.queries.orm import SyncORM
 
-from src.queries.orm import create_tables, insert_data, insert_data_async
-
-create_tables()
-# insert_data()
-asyncio.run(insert_data_async())
+SyncORM.create_tables()
+SyncORM.insert_workers()
+SyncORM.select_workers()
+SyncORM.update_worker()
+SyncORM.select_workers()

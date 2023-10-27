@@ -2,7 +2,7 @@ import datetime
 import enum
 from typing import Optional, Annotated
 
-from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, text
+from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, text, Enum, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.database import Base, str_256
@@ -49,4 +49,21 @@ worker_table = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("username", String),
+)
+
+resume_table = Table(
+    "resume",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("title", String(256)),
+    Column("compensation", Integer, nullable=True),
+    Column("workload", Enum(Workload)),
+    Column("worker_id", Integer, ForeignKey("worker.id", ondelete="CASCADE")),
+    Column("created_at", DateTime(timezone=True), server_default=text("TIMEZONE('utc', now())")),
+    Column(
+        "updated_at",
+        DateTime(timezone=True),
+        server_default=text("TIMEZONE('utc', now())"),
+        onupdate=datetime.datetime.utcnow
+    ),
 )
