@@ -2,7 +2,7 @@ from sqlalchemy import insert
 from sqlalchemy import select, text, update
 
 from src.database import sync_engine, async_engine
-from src.models import metadata
+from src.models import metadata, resume_table, Workload
 from src.models import worker_table
 
 
@@ -59,5 +59,38 @@ class SyncCore:
                 # .where(worker_table.c.id == worker_id)
                 .filter_by(id=worker_id)
             )
+            conn.execute(stmt)
+            conn.commit()
+
+    @staticmethod
+    def insert_resumes():
+        with sync_engine.connect() as conn:
+            resumes = [
+                {
+                    "title": "Python Junior Developer",
+                    "compensation": 50000,
+                    "workload": Workload.fulltime,
+                    "worker_id": 1,
+                },
+                {
+                    "title": "Python Разработчик",
+                    "compensation": 150000,
+                    "workload": Workload.fulltime,
+                    "worker_id": 1,
+                },
+                {
+                    "title": "Python Data Engineer",
+                    "compensation": 250000,
+                    "workload": Workload.parttime,
+                    "worker_id": 2,
+                },
+                {
+                    "title": "Data Scientist",
+                    "compensation": 300000,
+                    "workload": Workload.fulltime,
+                    "worker_id": 2,
+                },
+            ]
+            stmt = insert(resume_table).values(resumes)
             conn.execute(stmt)
             conn.commit()

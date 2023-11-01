@@ -1,7 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import select, func, cast, Integer, and_
 
 from src.database import sync_engine, sync_session_factory, Base, async_session_factory, async_engine
-from src.models import WorkerOrm
+from src.models import WorkerOrm, ResumeOrm, Workload
 
 
 class SyncORM:
@@ -39,6 +39,60 @@ class SyncORM:
             # session.expire_all()
             session.refresh(worker_michael)
             session.commit()
+
+    @staticmethod
+    def insert_resumes():
+        with sync_session_factory() as session:
+            resume_jack_1 = ResumeOrm(
+                title="Python Junior Developer",
+                compensation=50000,
+                workload=Workload.fulltime,
+                worker_id=1,
+            )
+            resume_jack_2 = ResumeOrm(
+                title="Python Разработчик",
+                compensation=150000,
+                workload=Workload.fulltime,
+                worker_id=1,
+            )
+            resume_michael_1 = ResumeOrm(
+                title="Python Data Engineer",
+                compensation=250000,
+                workload=Workload.parttime,
+                worker_id=2,
+            )
+            resume_michael_2 = ResumeOrm(
+                title="Data Scientist",
+                compensation=300000,
+                workload=Workload.fulltime,
+                worker_id=2,
+            )
+            session.add_all(
+                [resume_jack_1, resume_jack_2, resume_michael_1, resume_michael_2]
+            )
+            session.commit()
+
+    @staticmethod
+    def select_resumes_avg_compensation(like_language: str = "Python"):
+        with sync_session_factory() as session:
+            query = (
+                select(
+                    ResumeOrm.workload,
+                    cast(func.avg(ResumeOrm.compensation), Integer).label("avg_compensation"),
+                )
+                .select_from(ResumeOrm)
+                .filter(and_(
+                    ResumeOrm.title.contains(like_language),
+                    ResumeOrm.compensation > 40_000,
+                ))
+                .group_by(ResumeOrm.workload)
+                .having(cast(func.avg(ResumeOrm.compensation), Integer) > 70_000)
+            )
+            print(query.compile(compile_kwargs={"literal_binds": True}))
+            res = session.execute(query)
+            result = res.all()
+            print(result)
+            print(result[0].avg_compensation)
 
 
 class AsyncORM:
