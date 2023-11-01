@@ -117,3 +117,104 @@ class SyncCore:
             result = res.all()
             print(result)
             print(result[0].avg_compensation)
+
+
+class AsyncCore:
+    @staticmethod
+    async def create_tables():
+        async with async_engine.begin() as conn:
+            await conn.run_sync(metadata.drop_all)
+            await conn.run_sync(metadata.create_all)
+
+    @staticmethod
+    async def insert_workers():
+        async with async_engine.connect() as conn:
+            # stmt = """INSERT INTO workers (username) VALUES
+            #     ('Jack'),
+            #     ('Michael');"""
+            stmt = insert(worker_table).values(
+                [
+                    {"username": "Jack"},
+                    {"username": "Michael"},
+                ]
+            )
+            await conn.execute(stmt)
+            await conn.commit()
+
+    @staticmethod
+    async def select_workers():
+        async with async_engine.connect() as conn:
+            query = select(worker_table)
+            result = await conn.execute(query)
+            workers = result.all()
+            print(f"{workers=}")
+
+    @staticmethod
+    async def update_worker(worker_id: int = 2, new_username: str = "Misha"):
+        async with async_engine.connect() as conn:
+            # stmt = text("UPDATE workers SET username=:username WHERE id=:id")
+            # stmt = stmt.bindparams(username=new_username, id=worker_id)
+            stmt = (
+                update(worker_table)
+                .values(username=new_username)
+                # .where(worker_table.c.id==worker_id)
+                .filter_by(id=worker_id)
+            )
+            await conn.execute(stmt)
+            await conn.commit()
+
+    @staticmethod
+    async def insert_resumes():
+        async with async_engine.connect() as conn:
+            resumes = [
+                {
+                    "title": "Python Junior Developer",
+                    "compensation": 50000,
+                    "workload": Workload.fulltime,
+                    "worker_id": 1,
+                },
+                {
+                    "title": "Python Разработчик",
+                    "compensation": 150000,
+                    "workload": Workload.fulltime,
+                    "worker_id": 1,
+                },
+                {
+                    "title": "Python Data Engineer",
+                    "compensation": 250000,
+                    "workload": Workload.parttime,
+                    "worker_id": 2,
+                },
+                {
+                    "title": "Data Scientist",
+                    "compensation": 300000,
+                    "workload": Workload.fulltime,
+                    "worker_id": 2,
+                },
+            ]
+            stmt = insert(resume_table).values(resumes)
+            await conn.execute(stmt)
+            await conn.commit()
+
+    @staticmethod
+    async def select_resumes_avg_compensation(like_language: str = "Python"):
+        async with async_engine.connect() as conn:
+            query = (
+                select(
+                    resume_table.c.workload,
+                    # cast(func.avg(ResumeOrm.compensation), Integer).label("avg_compensation"),
+                    func.avg(resume_table.c.compensation).cast(Integer).label("avg_compensation"),
+                )
+                .select_from(resume_table)
+                .filter(and_(
+                    resume_table.c.title.contains(like_language),
+                    resume_table.c.compensation > 40000,
+                ))
+                .group_by(resume_table.c.workload)
+                .having(func.avg(resume_table.c.compensation) > 70000)
+            )
+            print(query.compile(compile_kwargs={"literal_binds": True}))
+            res = await conn.execute(query)
+            result = res.all()
+            print(result)
+            print(result[0].avg_compensation)
