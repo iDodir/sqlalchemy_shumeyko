@@ -1,8 +1,8 @@
-from sqlalchemy import insert
+from sqlalchemy import insert, cast, func, Integer, and_
 from sqlalchemy import select, text, update
 
 from src.database import sync_engine, async_engine
-from src.models import metadata, resume_table, Workload
+from src.models import metadata, resume_table, Workload, ResumeOrm
 from src.models import worker_table
 
 
@@ -94,3 +94,26 @@ class SyncCore:
             stmt = insert(resume_table).values(resumes)
             conn.execute(stmt)
             conn.commit()
+
+    @staticmethod
+    def select_resumes_avg_compensation(like_language: str = "Python"):
+        with sync_engine.connect() as conn:
+            query = (
+                select(
+                    resume_table.c.workload,
+                    # cast(func.avg(ResumeOrm.compensation), Integer).label("avg_compensation"),
+                    func.avg(resume_table.c.compensation).cast(Integer).label("avg_compensation"),
+                )
+                .select_from(resume_table)
+                .filter(and_(
+                    resume_table.c.title.contains(like_language),
+                    resume_table.c.compensation > 40000,
+                ))
+                .group_by(resume_table.c.workload)
+                .having(func.avg(resume_table.c.compensation) > 70000)
+            )
+            print(query.compile(compile_kwargs={"literal_binds": True}))
+            res = conn.execute(query)
+            result = res.all()
+            print(result)
+            print(result[0].avg_compensation)
