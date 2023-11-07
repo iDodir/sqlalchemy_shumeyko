@@ -11,6 +11,8 @@ def work_with_sync_core():
     SyncCore.select_workers()
     SyncCore.insert_resumes()
     SyncCore.select_resumes_avg_compensation()
+    SyncCore.insert_additional_resumes()
+    SyncCore.join_cte_subquery_window_func()
 
 
 async def work_with_async_core():
@@ -21,6 +23,8 @@ async def work_with_async_core():
     await AsyncCore.select_workers()
     await AsyncCore.insert_resumes()
     await AsyncCore.select_resumes_avg_compensation()
+    await AsyncCore.insert_additional_resumes()
+    await AsyncCore.join_cte_subquery_window_func()
 
 
 if __name__ == "__main__":

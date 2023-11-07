@@ -11,6 +11,8 @@ def work_with_sync_orm():
     SyncORM.select_workers()
     SyncORM.insert_resumes()
     SyncORM.select_resumes_avg_compensation()
+    SyncORM.insert_additional_resumes()
+    SyncORM.join_cte_subquery_window_func()
 
 
 async def work_with_async_orm():
@@ -21,6 +23,8 @@ async def work_with_async_orm():
     await AsyncORM.select_workers()
     await AsyncORM.insert_resumes()
     await AsyncORM.select_resumes_avg_compensation()
+    await AsyncORM.insert_additional_resumes()
+    await AsyncORM.join_cte_subquery_window_func()
 
 
 if __name__ == "__main__":

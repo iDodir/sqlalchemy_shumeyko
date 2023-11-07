@@ -1,5 +1,6 @@
 from sqlalchemy import insert, cast, func, Integer, and_
 from sqlalchemy import select, text, update
+from sqlalchemy.orm import aliased
 
 from src.database import sync_engine, async_engine
 from src.models import metadata, resume_table, Workload, ResumeOrm
@@ -118,6 +119,66 @@ class SyncCore:
             print(result)
             print(result[0].avg_compensation)
 
+    @staticmethod
+    def insert_additional_resumes():
+        with sync_engine.connect() as conn:
+            workers = [
+                {"username": "Artem"},  # id 3
+                {"username": "Roman"},  # id 4
+                {"username": "Petr"},  # id 5
+            ]
+            resumes = [
+                {"title": "Python программист", "compensation": 60000, "workload": "fulltime", "worker_id": 3},
+                {"title": "Machine Learning Engineer", "compensation": 70000, "workload": "parttime", "worker_id": 3},
+                {"title": "Python Data Scientist", "compensation": 80000, "workload": "parttime", "worker_id": 4},
+                {"title": "Python Analyst", "compensation": 90000, "workload": "fulltime", "worker_id": 4},
+                {"title": "Python Junior Developer", "compensation": 100000, "workload": "fulltime", "worker_id": 5},
+            ]
+            insert_workers = insert(worker_table).values(workers)
+            insert_resumes = insert(resume_table).values(resumes)
+            conn.execute(insert_workers)
+            conn.execute(insert_resumes)
+            conn.commit()
+
+    @staticmethod
+    def join_cte_subquery_window_func():
+        with sync_engine.connect() as conn:
+            r = aliased(resume_table)
+            w = aliased(worker_table)
+            subq = (
+                select(
+                    r,
+                    w,
+                    (
+                        func.avg(r.c.compensation)
+                        .over(partition_by=r.c.workload)
+                        .cast(Integer)
+                        .label("avg_workload_compensation")
+                    ),
+                )
+                # .select_from(r)
+                .join(r, r.c.worker_id == w.c.id).subquery("helper1")
+            )
+            cte = (
+                select(
+                    subq.c.worker_id,
+                    subq.c.username,
+                    subq.c.compensation,
+                    subq.c.workload,
+                    subq.c.avg_workload_compensation,
+                    (subq.c.compensation - subq.c.avg_workload_compensation).label("compensation_diff"),
+                )
+                .cte("helper2")
+            )
+            query = (
+                select(cte)
+                .order_by(cte.c.compensation_diff.desc())
+            )
+
+            res = conn.execute(query)
+            result = res.all()
+            print(f"{len(result)=}. {result=}")
+
 
 class AsyncCore:
     @staticmethod
@@ -218,3 +279,63 @@ class AsyncCore:
             result = res.all()
             print(result)
             print(result[0].avg_compensation)
+
+    @staticmethod
+    async def insert_additional_resumes():
+        async with async_engine.connect() as conn:
+            workers = [
+                {"username": "Artem"},  # id 3
+                {"username": "Roman"},  # id 4
+                {"username": "Petr"},  # id 5
+            ]
+            resumes = [
+                {"title": "Python программист", "compensation": 60000, "workload": "fulltime", "worker_id": 3},
+                {"title": "Machine Learning Engineer", "compensation": 70000, "workload": "parttime", "worker_id": 3},
+                {"title": "Python Data Scientist", "compensation": 80000, "workload": "parttime", "worker_id": 4},
+                {"title": "Python Analyst", "compensation": 90000, "workload": "fulltime", "worker_id": 4},
+                {"title": "Python Junior Developer", "compensation": 100000, "workload": "fulltime", "worker_id": 5},
+            ]
+            insert_workers = insert(worker_table).values(workers)
+            insert_resumes = insert(resume_table).values(resumes)
+            await conn.execute(insert_workers)
+            await conn.execute(insert_resumes)
+            await conn.commit()
+
+    @staticmethod
+    async def join_cte_subquery_window_func():
+        async with async_engine.connect() as conn:
+            r = aliased(resume_table)
+            w = aliased(worker_table)
+            subq = (
+                select(
+                    r,
+                    w,
+                    (
+                        func.avg(r.c.compensation)
+                        .over(partition_by=r.c.workload)
+                        .cast(Integer)
+                        .label("avg_workload_compensation")
+                    ),
+                )
+                # .select_from(r)
+                .join(r, r.c.worker_id == w.c.id).subquery("helper1")
+            )
+            cte = (
+                select(
+                    subq.c.worker_id,
+                    subq.c.username,
+                    subq.c.compensation,
+                    subq.c.workload,
+                    subq.c.avg_workload_compensation,
+                    (subq.c.compensation - subq.c.avg_workload_compensation).label("compensation_diff"),
+                )
+                .cte("helper2")
+            )
+            query = (
+                select(cte)
+                .order_by(cte.c.compensation_diff.desc())
+            )
+
+            res = await conn.execute(query)
+            result = res.all()
+            print(f"{len(result)=}. {result=}")
