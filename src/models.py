@@ -2,8 +2,18 @@ import datetime
 import enum
 from typing import Optional, Annotated
 
-from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, text, Enum, DateTime
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    Table,
+    Column,
+    Integer,
+    String,
+    MetaData,
+    ForeignKey,
+    text,
+    Enum,
+    TIMESTAMP,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base, str_256
 
@@ -24,6 +34,10 @@ class WorkerOrm(Base):
     id: Mapped[intpk]
     username: Mapped[str]
 
+    resumes: Mapped[list["ResumeOrm"]] = relationship(
+        back_populates="worker",
+    )
+
 
 class Workload(enum.Enum):
     parttime = "parttime"
@@ -40,6 +54,13 @@ class ResumeOrm(Base):
     worker_id: Mapped[int] = mapped_column(ForeignKey("worker.id", ondelete="CASCADE"))
     created_at: Mapped[created_at]
     updated_at: Mapped[updated_at]
+
+    worker: Mapped["WorkerOrm"] = relationship(
+        back_populates="resumes",
+    )
+
+    repr_cols_num = 2
+    repr_cols = ("created_at",)
 
 
 metadata = MetaData()
@@ -59,10 +80,10 @@ resume_table = Table(
     Column("compensation", Integer, nullable=True),
     Column("workload", Enum(Workload)),
     Column("worker_id", Integer, ForeignKey("worker.id", ondelete="CASCADE")),
-    Column("created_at", DateTime(timezone=True), server_default=text("TIMEZONE('utc', now())")),
+    Column("created_at", TIMESTAMP, server_default=text("TIMEZONE('utc', now())")),
     Column(
         "updated_at",
-        DateTime(timezone=True),
+        TIMESTAMP,
         server_default=text("TIMEZONE('utc', now())"),
         onupdate=datetime.datetime.utcnow
     ),

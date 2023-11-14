@@ -1,5 +1,5 @@
 from sqlalchemy import select, func, cast, Integer, and_, insert
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload, selectinload
 
 from src.database import sync_engine, sync_session_factory, Base, async_session_factory, async_engine
 from src.models import WorkerOrm, ResumeOrm, Workload
@@ -155,6 +155,56 @@ class SyncORM:
             result = res.all()
             print(f"{len(result)=}. {result=}")
 
+    @staticmethod
+    def select_workers_with_lazy_relationship():
+        with sync_session_factory() as session:
+            query = (
+                select(WorkerOrm)
+            )
+
+            res = session.execute(query)
+            result = res.scalars().all()
+
+            worker_1_resumes = result[0].resumes
+            print(worker_1_resumes)
+
+            worker_2_resumes = result[1].resumes
+            print(worker_2_resumes)
+
+    @staticmethod
+    def select_workers_with_joined_relationship():
+        with sync_session_factory() as session:
+            query = (
+                select(WorkerOrm)
+                .options(joinedload(WorkerOrm.resumes))
+            )
+
+            res = session.execute(query)
+            result = res.unique().scalars().all()
+
+            worker_1_resumes = result[0].resumes
+            print(worker_1_resumes)
+
+            worker_2_resumes = result[1].resumes
+            print(worker_2_resumes)
+
+    @staticmethod
+    def select_workers_with_selectin_relationship():
+        with sync_session_factory() as session:
+            query = (
+                select(WorkerOrm)
+                .options(selectinload(WorkerOrm.resumes))
+            )
+
+            res = session.execute(query)
+            result = res.unique().scalars().all()
+
+            worker_1_resumes = result[0].resumes
+            print(worker_1_resumes)
+
+            worker_2_resumes = result[1].resumes
+            print(worker_2_resumes)
+
 
 class AsyncORM:
     @staticmethod
@@ -303,3 +353,52 @@ class AsyncORM:
 
             print(f"{result=}")
             print(query.compile(compile_kwargs={"literal_binds": True}))
+
+    @staticmethod
+    async def select_workers_with_lazy_relationship():
+        async with async_session_factory() as session:
+            query = (
+                select(WorkerOrm)
+            )
+
+            res = await session.execute(query)
+            result = res.scalars().all()
+
+            print(result)
+
+            # worker_1_resumes = result[0].resumes
+            # print(worker_1_resumes)
+
+    @staticmethod
+    async def select_workers_with_joined_relationship():
+        async with async_session_factory() as session:
+            query = (
+                select(WorkerOrm)
+                .options(joinedload(WorkerOrm.resumes))
+            )
+
+            res = await session.execute(query)
+            result = res.unique().scalars().all()
+
+            worker_1_resumes = result[0].resumes
+            print(worker_1_resumes)
+
+            worker_2_resumes = result[1].resumes
+            print(worker_2_resumes)
+
+    @staticmethod
+    async def select_workers_with_selectin_relationship():
+        async with async_session_factory() as session:
+            query = (
+                select(WorkerOrm)
+                .options(selectinload(WorkerOrm.resumes))
+            )
+
+            res = await session.execute(query)
+            result = res.scalars().all()
+
+            worker_1_resumes = result[0].resumes
+            print(worker_1_resumes)
+
+            worker_2_resumes = result[1].resumes
+            print(worker_2_resumes)
